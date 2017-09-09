@@ -42,13 +42,13 @@ class CashFlow(object):
     @property
     def profile(self):
         profile = [(t, Ct) for t, Ct in self._cashflow.items()]
-        profile = sorted(profile, key=lambda t: t[0])
-        t = map(lambda t: t[0], profile)
-        C = map(lambda t: t[1], profile)
+        profile = sorted(profile, key=lambda a: a[0])
+        t = map(lambda a: a[0], profile)
+        C = map(lambda a: a[1], profile)
         return t, C
 
     @classmethod
-    def CouponBond(cls, par, c, t0, T, n):
+    def CouponBond(cls, par, c, t0, T, n=2):
         cashflow, t, C = dict(), t0 + 1 / n, c * par / n
         while t <= T:
             cashflow[t] = C
@@ -60,7 +60,7 @@ class CashFlow(object):
         return cls(cashflow)
 
     @classmethod
-    def Annuity(cls, A, t0, T, n):
+    def Annuity(cls, A, t0, T, n=2):
         cashflow, t = dict(), t0 + 1 / n
         while t <= T:
             cashflow[t] = A / n
@@ -84,4 +84,7 @@ class CashFlow(object):
             for t, Ct in self._cashflow.items():
                 assert (t in disc)
                 price += Ct * disc[t]
+        elif hasattr(disc, '__call__'):
+            for t, Ct in self._cashflow.items():
+                price += Ct * disc(t)
         return price
