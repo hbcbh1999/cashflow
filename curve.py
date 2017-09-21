@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 from copy import copy
 from scipy.optimize import newton
-from cashflow import CashFlow
+from scipy.interpolate import interp1d
 
 
 class Curve(object):
@@ -25,21 +25,19 @@ class Curve(object):
             return 1/(1+y/n)**(n*t)
         return Curve(d)
 
+    @classmethod
+    def SpotRateDict(cls, spots, n=2):
+        disc = dict()
+        for t in spots:
+            disc[t] = 1/(1+spots[t]/n)**(n*t)
+        return disc
 
-if __name__ == '__main__':
-    c = Curve.SingleRateCurve(0.007368)
-    #print(c(1), c(2))
-    #print(type(c) is Curve)
-    cf = CashFlow.CouponBond(100,(4+3/4)/100,0,2,2)
-    print(cf)
-    p = Curve.calibrate(cf, 107.9531)
-    print(p)
-    cf1 = CashFlow.CouponBond(100, 0.04, 0, 1)
-    cf2 = CashFlow.CouponBond(100, 0.12, 0, 1)
-    y1 = Curve.calibrate(cf1, 96.265)
-    y12 = Curve.calibrate(cf1, 99.962)
-    y2 = Curve.calibrate(cf2, 103.885)
-    y22 = Curve.calibrate(cf2, 107.653)
+    @classmethod
+    def LinearInterpolation(cls, anchors):
+        profile = [(t, r) for t, r in anchors]
+        profile = sorted(profile, key=lambda a: a[0])
+        t_vec = map(lambda a: a[0], profile)
+        r_vec = map(lambda a: a[1], profile)
+        d = interp1d(t_vec, r_vec)
+        return Curve(d)
 
-    print(cf.price(c))
-    print(y1, y12, y2, y22)

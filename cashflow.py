@@ -1,9 +1,15 @@
 from __future__ import division
 import numpy as np
+import scipy.misc
+from scipy.optimize import newton
 from copy import copy
+from curve import Curve
+
+BP = 0.0001
 
 
 class CashFlow(object):
+
     def __init__(self, cashflow):
         if type(cashflow) is dict:
             self._cashflow = cashflow
@@ -87,4 +93,38 @@ class CashFlow(object):
         elif hasattr(disc, '__call__'):
             for t, Ct in self._cashflow.items():
                 price += Ct * disc(t)
+        else:
+            raise TypeError
         return price
+
+    def derivative(self, y, order):
+        def __price_with_single_rate(__y):
+            return self.price(Curve.SingleRateCurve(__y))
+        return scipy.misc.derivative(
+            __price_with_single_rate, x0=y,
+            dx=1e-5, n=order)
+
+    def dv01(self, y):
+        return -self.derivative(y, 1) * BP
+
+    def duration(self, y):
+        return -self.derivative(y, 1) / self.price(
+            Curve.SingleRateCurve(y))
+
+    def convexity(self, y):
+        return self.derivative(y, 2) / self.price(
+            Curve.SingleRateCurve(y))
+
+
+
+if __name__ == '__main__':
+    ln = Curve.LinearInterpolation([(0.5, 1/1.01), (15, 1/(1.025**30))])
+    a1 = CashFlow.Annuity(1, 0, 10)
+    a2 = CashFlow.Annuity(10, 0, 5)
+    zcb = CashFlow({10: 100})
+    cb = CashFlow.CouponBond(100, 10000, 0, 10)
+    print(1/ln(10))
+    print(ln.calibrate(a1, a1.price(ln)))
+    print(ln.calibrate(a2, a2.price(ln)))
+    print(Curve.calibrate(zcb, zcb.price(ln)))
+    print(Curve.calibrate(cb, cb.price(ln)))
